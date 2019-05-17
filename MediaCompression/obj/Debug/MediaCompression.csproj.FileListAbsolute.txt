@@ -1,10 +1,9 @@
-C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.exe.config
-C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.exe
-C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.pdb
-C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.csprojAssemblyReference.cache
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.Form1.resources
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.Properties.Resources.resources
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.csproj.GenerateResource.cache
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.csproj.CoreCompileInputs.cache
+C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.exe.config
+C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.exe
+C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.pdb
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.exe
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.pdb

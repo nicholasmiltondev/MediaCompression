@@ -21,7 +21,7 @@ namespace MediaCompression
         public int[] YCbCrToRGB(int y1, int cb1, int cr1)
         {
             double r = y1 + 1.402 * (cr1 - 128);
-            double g = y1 - 0.344136 * (cb1 - 128) - 0.714136*(cr1 -128);
+            double g = y1 - 0.344136 * (cb1 - 128) - 0.714136 * (cr1 - 128);
             double b = y1 + 1.772 * (cb1 - 128);
 
             r = between0and255(r);
@@ -37,9 +37,9 @@ namespace MediaCompression
         {
             if (color < 0)
                 return 0;
-            if(color > 255)
+            if (color > 255)
                 return 255;
-                return color;
+            return color;
         }
 
         // Uses array to quantize an 8x8 block.
@@ -96,15 +96,13 @@ namespace MediaCompression
          {99,99,99,99,99,99,99,99},
          {99,99,99,99,99,99,99,99},
          {99,99,99,99,99,99,99,99}};
-            int[,] QF = new int[F.GetLength(0), F.GetLength(1)];
+            int[,] QF = new int[8, 8];
             int i, j;
-            int scalex = QF.GetLength(0) / q.GetLength(0);
-            int scaley = QF.GetLength(1) / q.GetLength(1);
-            for (i = 0; i < QF.GetLength(0); i++)
+            for (i = 0; i < 8; i++)
             {
-                for (j = 0; j < QF.GetLength(1); j++)
+                for (j = 0; j < 8; j++)
                 {
-                    QF[i, j] = F[i, j] / q[i / scalex, j / scaley];
+                    QF[i, j] = F[i, j] / q[i, j];
                 }
             }
             return QF;
@@ -119,52 +117,56 @@ namespace MediaCompression
          {99,99,99,99,99,99,99,99},
          {99,99,99,99,99,99,99,99},
          {99,99,99,99,99,99,99,99}};
-            int[,] QF = new int[F.GetLength(0), F.GetLength(1)];
+            int[,] QF = new int[8, 8];
             int i, j;
-            int scalex = QF.GetLength(0) / q.GetLength(0);
-            int scaley = QF.GetLength(1) / q.GetLength(1);
-            for (i = 0; i < QF.GetLength(0); i++)
+            for (i = 0; i < 8; i++)
             {
-                for (j = 0; j < QF.GetLength(1); j++)
+                for (j = 0; j < 8; j++)
                 {
-                    QF[i, j] = F[i, j] * q[i / scalex, j / scaley];
+                    QF[i, j] = F[i, j] * q[i, j];
                 }
             }
             return QF;
         }
 
-        public int[,] zz =
+        public int[] zz =
         {
-                { 0, 1, 8, 16, 9, 2, 3, 10 },
-                { 17, 24, 32, 25, 18, 11, 4, 5 },
-                { 12, 19, 26, 33, 40, 48, 41, 34 },
-                { 27, 20, 13, 6, 7, 14, 21, 28 },
-                { 35, 42, 49, 56, 57, 50, 43, 36 },
-                { 29, 22, 15, 23, 30, 37, 44, 51 },
-                { 58, 59, 52, 45, 38, 31, 39, 46 },
-                { 53, 60, 61, 54, 47, 55, 62, 63 }
+                 0, 1, 8, 16, 9, 2, 3, 10 ,
+                 17, 24, 32, 25, 18, 11, 4, 5,
+                 12, 19, 26, 33, 40, 48, 41, 34,
+                 27, 20, 13, 6, 7, 14, 21, 28,
+                 35, 42, 49, 56, 57, 50, 43, 36,
+                 29, 22, 15, 23, 30, 37, 44, 51,
+                 58, 59, 52, 45, 38, 31, 39, 46,
+                 53, 60, 61, 54, 47, 55, 62, 63
         };
 
-        public void zigZag(int[,] QF, int[] ZZ)
+        public Byte[] zigZag(int[,] block)
         {
-            int i = 0;
-            int[] temp = new int[64];
-            for(int j = 0; j < 8; j++)
-                for(int k = 0; k < 8; k++)
+            Byte[] singleArray = new Byte[64];
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
                 {
-                    temp[i] = QF[j, k];
-                    i++;
+                    int bx = zz[x + y * 8] % 8;
+                    int by = (int)Math.Floor((float)zz[x + y * 8] / 8.0);
+                    singleArray[x + y * 8] = (Byte)block[by, bx];
                 }
-            i = 0;
-            for(int h = 0; h < 8; h++)
-                for(int l = 0; l < 8; l++)
-                {
-                    ZZ[i] = temp[zz[h, l]];
-                    i++;
-                }
+            return singleArray;
         }
 
-        void Encode(int []RL, int rl)
+        public int[,] reverseZigZag(Byte[] input)
+        {
+            int[,] block = new int[8, 8];
+            for (int i = 0; i < 64; i++)
+            {
+                int x = zz[i]%8;
+                int y = (int)Math.Floor((float)zz[i]/8.0);
+                block[y, x] = input[i];
+            }
+            return block;
+        }
+
+        void Encode(int[] RL, int rl)
         {
 
         }
@@ -183,19 +185,19 @@ namespace MediaCompression
             else
                 return (1.0f / 2.0f);
         }
-        public int[,] DCT(int [,]input)
+        public int[,] DCT(int[,] input)
         {
             float pi = (float)Math.PI;
-            int[,] ret = new int[input.GetLength(0), input.GetLength(1)];
+            int[,] ret = new int[8, 8];
             float a;
-            for (int u = 0; u < ret.GetLength(0); u++)
-                for (int v = 0; v < ret.GetLength(1); v++)
+            for (int u = 0; u < 8; u++)
+                for (int v = 0; v < 8; v++)
                 {
                     a = 0.0f;
-                    for (int x = 0; x < ret.GetLength(0); x++)
-                        for (int y = 0; y < ret.GetLength(0); y++)
-                            a += (float)((float)input[x, y] 
-                                * (float)Math.Cos((2.0 * (float)(x) + 1.0) * (float)(u) * pi / 16.0) 
+                    for (int x = 0; x < 8; x++)
+                        for (int y = 0; y < 8; y++)
+                            a += (float)((float)input[x, y]
+                                * (float)Math.Cos((2.0 * (float)(x) + 1.0) * (float)(u) * pi / 16.0)
                                 * (float)Math.Cos((2.0 * (float)(y) + 1.0) * (float)(v) * pi / 16.0));
                     ret[u, v] = (int)(0.25 * C(u) * C(v) * a);
                 }
@@ -204,48 +206,50 @@ namespace MediaCompression
         public int[,] IDCT(int[,] input)
         {
             float pi = (float)Math.PI;
-            int[,] ret = new int[input.GetLength(0), input.GetLength(1)];
+            int[,] ret = new int[8, 8];
             float a;
-            for (int x = 0; x < ret.GetLength(0); x++)
-                for (int y = 0; y < ret.GetLength(1); y++)
+            for (int x = 0; x < 8; x++)
+                for (int y = 0; y < 8; y++)
                 {
                     a = 0.0f;
-                    for (int u = 0; u < ret.GetLength(0); u++)
-                        for (int v = 0; v < ret.GetLength(1); v++)
-                            a += (float)(CD(u) * CD(v) * (float)(input[u, v]) 
-                                * Math.Cos((2.0 * (float)(x) + 1.0) * (float)(u) * pi / 16.0) 
+                    for (int u = 0; u < 8; u++)
+                        for (int v = 0; v < 8; v++)
+                            a += (float)(C(u) * C(v) * (float)(input[u, v])
+                                * Math.Cos((2.0 * (float)(x) + 1.0) * (float)(u) * pi / 16.0)
                                 * Math.Cos((2.0 * (float)(y) + 1.0) * (float)(v) * pi / 16.0));
 
-                    ret[x, y] = (int)between0and255((Math.Round(a)*0.25));
+                    ret[x, y] = (int)between0and255((Math.Round(a * 0.25)));
                 }
             return ret;
         }
 
-        public ArrayList RLE(int[]ZZ) // Rewrite to store in a byte array
+        public ArrayList RLE(int[] ZZ) // Rewrite to store in a byte array
         {
             ArrayList myAL = new ArrayList();
             int count = 0;
-            for(int i = 0; i < 64; i++)
+            for (int i = 0; i < 64; i++)
             {
-                if(ZZ[i] != 0) // if next number is not zero...
+                if (ZZ[i] != 0) // if next number is not zero...
                 {
-                    if(count == 0) // and no zeroes occurred previously
+                    if (count == 0) // and no zeroes occurred previously
                     {
                         myAL.Add(ZZ[i]); // add the number to the arraylist
                     }
                     else// else a non zero occurred and you have a string of zeroes before
                     {
-                        myAL.Add(0); 
+                        myAL.Add(0);
                         myAL.Add(count);
                         myAL.Add(ZZ[i]);
                         count = 0; // Reset count;
                     }
-                } else if(i < 63) // else zero occurred and not end of the array
+                }
+                else if (i < 63) // else zero occurred and not end of the array
                 {
                     count++; // add to count
-                } else // zero occurred and end of the array
+                }
+                else // zero occurred and end of the array
                 {
-                    count++; 
+                    count++;
                     myAL.Add(0);
                     myAL.Add(count);
                     count = 0;
@@ -255,20 +259,20 @@ namespace MediaCompression
             return myAL;
         }
 
-        public ArrayList Compress(int [,]f)
+        public ArrayList Compress(int[,] f)
         {
-            int [,]F = new int[8,8];
+            int[,] F = new int[8, 8];
             //DCT(f, F);
-            int [,]QF = new int[8,8];
+            int[,] QF = new int[8, 8];
             //Quantize(F, QF);
 
-            int newDC = QF[0,0];
+            int newDC = QF[0, 0];
 
-            int []ZZ = new int[64];
-            zigZag(QF, ZZ);
-            
+            int[] ZZ = new int[64];
+            //zigZag(QF, ZZ);
+
             return RLE(ZZ);
         }
 
-}
+    }
 }

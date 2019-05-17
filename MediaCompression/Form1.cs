@@ -24,9 +24,6 @@ namespace MediaCompression
         int[][,] yArrayQuantized;
         int[][,] CbArrayQuantized;
         int[][,] CrArrayQuantized;
-        int[,] y64; // 8x8 array for y
-        int[,] Cb64; // 8x8 array for Cr
-        int[,] Cr64; // 8x8 array for Cb
         int width;
         int height;
         int subWidth;
@@ -171,13 +168,13 @@ namespace MediaCompression
             CbArray = new int[yArray.Length];
             CrArray = new int[yArray.Length];
 
-            for (int j = 0; j < width; j++)
-                for (int k = 0; k < height; k++)
+            for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    int subX = (int)Math.Floor((float)j / 2);
-                    int subY = (int)Math.Floor((float)k / 2);
-                    CbArray[j + k * width] = CbArraySubsampled[subX + subY * subWidth];
-                    CrArray[j + k * width] = CrArraySubsampled[subX + subY * subWidth];
+                    int subX = (int)Math.Floor((float)x / 2);
+                    int subY = (int)Math.Floor((float)y / 2);
+                    CbArray[x + y * width] = CbArraySubsampled[subX + subY * subWidth];
+                    CrArray[x + y * width] = CrArraySubsampled[subX + subY * subWidth];
                 }
         }
 
@@ -186,13 +183,13 @@ namespace MediaCompression
         {
             //iterate8x8(currentW, currentH);
 
-            im.Compress(y64);
-            im.Compress(Cb64);
-            im.Compress(Cr64);
+            //im.Compress(y64);
+            //im.Compress(Cb64);
+            //im.Compress(Cr64);
         }
 
         // Blocksampling 8x8
-        private int[,] iterate8x8(int currentW, int currentH, int[] yArrayParam)
+        private int[,] iterate8x8(int currentW, int currentH, int[] yArrayParam, int width, int height)
         {
             int[,] eightByEight = new int[8, 8];
             
@@ -213,16 +210,16 @@ namespace MediaCompression
             return eightByEight;
         }
 
-        private void uniterate(int currentW, int currentH, ref int[] yArrayParam, int[,] eightByEight)
+        private void uniterate(int currentW, int currentH, ref int[] yArrayParam, int[,] eightByEight, int width, int height)
         {
-            for (int j = 0; j < 8; j++)
+            for (int y = 0; y < 8; y++)
             {
-                for (int k = 0; k < 8; k++)
+                for (int x = 0; x < 8; x++)
                 {
-                    if (currentW + j <= width)
-                        if (currentH + k <= height)
+                    if (currentW + x < width)
+                        if (currentH + y < height)
                         {
-                            yArrayParam[currentW + j + (k + currentH) * width] = eightByEight[j, k];
+                            yArrayParam[currentW + x + (y + currentH) * width] = eightByEight[x, y];
                             //Cb64[j, k] = CbArrayParam[currentW + j + (k + currentH) * width];
                             //Cr64[j, k] = CrArrayParam[currentW + j + (k + currentH) * width];
                         }
@@ -242,58 +239,69 @@ namespace MediaCompression
             CbArrayQuantized = new int[xSubLength*ySubLength][,];
             CrArrayQuantized = new int[xSubLength*ySubLength][,];
 
-            for (int j = 0; j < width; j += 8)
+            for (int j = 0; j < xLength; j++)
             {
-                for (int k = 0; k < height; k += 8)
+                for (int k = 0; k < yLength; k++)
                 {
-                    var block = iterate8x8(j, k, yArraySubsampled);
-                    block = im.DCT(block);
-                    block = im.QuantizeL(block);
-                    yArrayQuantized[j + k*width] = block;
+                    var block = iterate8x8(j * 8, k * 8, yArraySubsampled, width, height);
+                    //block = im.DCT(block);
+                    //block = im.QuantizeL(block);
+                    //int[,] block = new int[8, 8];    
+                    yArrayQuantized[j + k * xLength] = block;
                 }
             }
 
-            for (int j = 0; j < subWidth; j += 8)
+            for (int y = 0; y < ySubLength; y++)
             {
-                for (int k = 0; k < subHeight; k += 8)
+                for (int x = 0; x < xSubLength; x++)
                 {
-                    var blockCr = iterate8x8(j, k, CrArraySubsampled);
-                    var blockCb = iterate8x8(j, k, CbArraySubsampled);
-                    blockCr = im.DCT(blockCr);
-                    blockCb = im.DCT(blockCb);
-                    blockCr = im.QuantizeL(blockCr);
-                    blockCb = im.QuantizeL(blockCb);
-                    CrArrayQuantized[j + k * width] = blockCr;
-                    CbArrayQuantized[j + k * width] = blockCb;
+                    var blockCr = iterate8x8(x * 8, y * 8, CrArraySubsampled, subWidth, subHeight);
+                    var blockCb = iterate8x8(x * 8, y * 8, CbArraySubsampled, subWidth, subHeight);
+                    //blockCr = im.DCT(blockCr);
+                    //blockCb = im.DCT(blockCb);
+                    //blockCr = im.QuantizeC(blockCr);
+                    //blockCb = im.QuantizeC(blockCb);
+                    CrArrayQuantized[x + y * xSubLength] = blockCr;
+                    CbArrayQuantized[x + y * xSubLength] = blockCb;
                 }
             }
         }
 
         private void reverseBitmap()
         {
-            for (int j = 0; j < width; j += 8)
-            {
-                for (int k = 0; k < height; k += 8)
-                {
-                    var block = yArrayQuantized[j + k * width];
-                    block = im.QuantizeLD(block);
-                    block = im.IDCT(block);
+            yArraySubsampled = new int[width*height];
+            CrArraySubsampled = new int[subWidth*subHeight];
+            CbArraySubsampled = new int[subWidth*subHeight];
 
+            int xLength = (int)Math.Ceiling((float)(width / 8));
+            int yLength = (int)Math.Ceiling((float)(height / 8));
+
+            int xSubLength = (int)Math.Ceiling((float)(subWidth / 8));
+            int ySubLength = (int)Math.Ceiling((float)(subHeight / 8));
+
+            for (int y = 0; y < yLength; y++)
+            {
+                for (int x = 0; x < xLength; x++)
+                {
+                    var block = yArrayQuantized[x + y * xLength];
+                    //block = im.QuantizeLD(block);
+                    //block = im.IDCT(block);
+                    uniterate(x * 8, y * 8, ref yArraySubsampled, block, width, height);
                 }
             }
 
-            for (int j = 0; j < subWidth; j += 8)
+            for (int y = 0; y < ySubLength; y++)
             {
-                for (int k = 0; k < subHeight; k += 8)
+                for (int x = 0; x < xSubLength; x++)
                 {
-                    var blockCr = iterate8x8(j, k, CrArraySubsampled);
-                    var blockCb = iterate8x8(j, k, CbArraySubsampled);
-                    blockCr = im.DCT(blockCr);
-                    blockCb = im.DCT(blockCb);
-                    blockCr = im.QuantizeL(blockCr);
-                    blockCb = im.QuantizeL(blockCb);
-                    CrArrayQuantized[j + k * width] = blockCr;
-                    CbArrayQuantized[j + k * width] = blockCb;
+                    var blockCr = CrArrayQuantized[x + y * xSubLength];
+                    var blockCb = CbArrayQuantized[x + y * xSubLength];
+                    //blockCr = im.QuantizeCD(blockCr);
+                    //blockCb = im.QuantizeCD(blockCb);
+                    //blockCr = im.IDCT(blockCr);
+                    //blockCb = im.IDCT(blockCb);
+                    uniterate(x * 8, y * 8, ref CrArraySubsampled, blockCr, subWidth, subHeight);
+                    uniterate(x * 8, y * 8, ref CbArraySubsampled, blockCb, subWidth, subHeight);
                 }
             }
         }
@@ -334,7 +342,20 @@ namespace MediaCompression
 
         private void button8_Click(object sender, EventArgs e)
         {
+            reverseBitmap();
             MessageBox.Show("inverse DCT conversion complete.");
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            int[,] block = new int[8, 8];
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
+                    block[y, x] = x + y*8;
+
+            //var newBlock = im.IDCT(im.DCT(block));
+            var zigzagblock = im.reverseZigZag(im.zigZag(block));
+
         }
     }
 }
