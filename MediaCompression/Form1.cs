@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,6 +25,12 @@ namespace MediaCompression
         int[][,] yArrayQuantized;
         int[][,] CbArrayQuantized;
         int[][,] CrArrayQuantized;
+        List<Byte> yListZigZag;
+        List<Byte> CrListZigZag;
+        List<Byte> CbListZigZag;
+        List<Byte> yListRLE;
+        List<Byte> CrListRLE;
+        List<Byte> CbListRLE;
         int width;
         int height;
         int subWidth;
@@ -53,7 +60,6 @@ namespace MediaCompression
                 width = loadedBitmap.Width;
                 pictureBox1.Image = loadedBitmap;
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-                textBox1.Text = openFileDialog1.FileName;
             }
         }
 
@@ -62,7 +68,7 @@ namespace MediaCompression
 
         }
 
-        // CONVERT button takes what is in the buffer and converts to format specified in the dropbox.
+        // Saves result of converting .nick file.
         private void button2_Click(object sender, EventArgs e)
         {
             // Displays a SaveFileDialog so the user can save the Image  
@@ -109,8 +115,8 @@ namespace MediaCompression
             CrArray = new int[width * height];
 
             //yCbCrBitmap = new Bitmap(width, height);
-            for(int j = 0; j < width; j++)
-                for(int k = 0; k < height; k++)
+            for (int j = 0; j < width; j++)
+                for (int k = 0; k < height; k++)
                 {
                     Color c = loadedBitmap.GetPixel(j, k); // Get a pixel
                     int[] x = im.RGBToYCbCr((int)c.R, (int)c.G, (int)c.B); // Create an array for YCbCr pixel
@@ -129,7 +135,7 @@ namespace MediaCompression
             for (int j = 0; j < width; j++)
                 for (int k = 0; k < height; k++)
                 {
-                    
+
                     int[] yCbCRcolor = new int[3];
                     //Console.WriteLine(c);
                     yCbCRcolor[0] = yArray[j + k * width]; // Always add y value
@@ -153,11 +159,11 @@ namespace MediaCompression
             CbArraySubsampled = new int[subWidth * subHeight];
             CrArraySubsampled = new int[subWidth * subHeight];
 
-            for (int j = 0; j < width; j+=2)
-                for (int k = 0; k < height; k+=2)
+            for (int j = 0; j < width; j += 2)
+                for (int k = 0; k < height; k += 2)
                 {
-                    CbArraySubsampled[j/2 + (k/2)*subWidth] = CbArray[j + k * width];
-                    CrArraySubsampled[j/2 + (k/2)*subWidth] = CrArray[j + k * width];
+                    CbArraySubsampled[j / 2 + (k / 2) * subWidth] = CbArray[j + k * width];
+                    CrArraySubsampled[j / 2 + (k / 2) * subWidth] = CrArray[j + k * width];
                 }
         }
 
@@ -192,15 +198,15 @@ namespace MediaCompression
         private int[,] iterate8x8(int currentW, int currentH, int[] yArrayParam, int width, int height)
         {
             int[,] eightByEight = new int[8, 8];
-            
+
             for (int j = 0; j < 8; j++)
             {
                 for (int k = 0; k < 8; k++)
                 {
-                    if(currentW + j <= width)
-                        if(currentH + k <= height)
+                    if (currentW + j <= width)
+                        if (currentH + k <= height)
                         {
-                            eightByEight[j,k] = yArrayParam[currentW + j + (k + currentH) * width];
+                            eightByEight[j, k] = yArrayParam[currentW + j + (k + currentH) * width];
                             //Cb64[j, k] = CbArrayParam[currentW + j + (k + currentH) * width];
                             //Cr64[j, k] = CrArrayParam[currentW + j + (k + currentH) * width];
                         }
@@ -235,17 +241,17 @@ namespace MediaCompression
             int xSubLength = (int)Math.Ceiling((float)(subWidth / 8));
             int ySubLength = (int)Math.Ceiling((float)(subHeight / 8));
 
-            yArrayQuantized = new int[xLength*yLength][,];
-            CbArrayQuantized = new int[xSubLength*ySubLength][,];
-            CrArrayQuantized = new int[xSubLength*ySubLength][,];
+            yArrayQuantized = new int[xLength * yLength][,];
+            CbArrayQuantized = new int[xSubLength * ySubLength][,];
+            CrArrayQuantized = new int[xSubLength * ySubLength][,];
 
             for (int j = 0; j < xLength; j++)
             {
                 for (int k = 0; k < yLength; k++)
                 {
                     var block = iterate8x8(j * 8, k * 8, yArraySubsampled, width, height);
-                    //block = im.DCT(block);
-                    //block = im.QuantizeL(block);
+                    block = im.DCT(block);
+                    block = im.QuantizeL(block);
                     //int[,] block = new int[8, 8];    
                     yArrayQuantized[j + k * xLength] = block;
                 }
@@ -257,10 +263,10 @@ namespace MediaCompression
                 {
                     var blockCr = iterate8x8(x * 8, y * 8, CrArraySubsampled, subWidth, subHeight);
                     var blockCb = iterate8x8(x * 8, y * 8, CbArraySubsampled, subWidth, subHeight);
-                    //blockCr = im.DCT(blockCr);
-                    //blockCb = im.DCT(blockCb);
-                    //blockCr = im.QuantizeC(blockCr);
-                    //blockCb = im.QuantizeC(blockCb);
+                    blockCr = im.DCT(blockCr);
+                    blockCb = im.DCT(blockCb);
+                    blockCr = im.QuantizeC(blockCr);
+                    blockCb = im.QuantizeC(blockCb);
                     CrArrayQuantized[x + y * xSubLength] = blockCr;
                     CbArrayQuantized[x + y * xSubLength] = blockCb;
                 }
@@ -269,9 +275,9 @@ namespace MediaCompression
 
         private void reverseBitmap()
         {
-            yArraySubsampled = new int[width*height];
-            CrArraySubsampled = new int[subWidth*subHeight];
-            CbArraySubsampled = new int[subWidth*subHeight];
+            yArraySubsampled = new int[width * height];
+            CrArraySubsampled = new int[subWidth * subHeight];
+            CbArraySubsampled = new int[subWidth * subHeight];
 
             int xLength = (int)Math.Ceiling((float)(width / 8));
             int yLength = (int)Math.Ceiling((float)(height / 8));
@@ -284,8 +290,8 @@ namespace MediaCompression
                 for (int x = 0; x < xLength; x++)
                 {
                     var block = yArrayQuantized[x + y * xLength];
-                    //block = im.QuantizeLD(block);
-                    //block = im.IDCT(block);
+                    block = im.QuantizeLD(block);
+                    block = im.IDCT(block);
                     uniterate(x * 8, y * 8, ref yArraySubsampled, block, width, height);
                 }
             }
@@ -296,10 +302,10 @@ namespace MediaCompression
                 {
                     var blockCr = CrArrayQuantized[x + y * xSubLength];
                     var blockCb = CbArrayQuantized[x + y * xSubLength];
-                    //blockCr = im.QuantizeCD(blockCr);
-                    //blockCb = im.QuantizeCD(blockCb);
-                    //blockCr = im.IDCT(blockCr);
-                    //blockCb = im.IDCT(blockCb);
+                    blockCr = im.QuantizeCD(blockCr);
+                    blockCb = im.QuantizeCD(blockCb);
+                    blockCr = im.IDCT(blockCr);
+                    blockCb = im.IDCT(blockCb);
                     uniterate(x * 8, y * 8, ref CrArraySubsampled, blockCr, subWidth, subHeight);
                     uniterate(x * 8, y * 8, ref CbArraySubsampled, blockCb, subWidth, subHeight);
                 }
@@ -348,14 +354,142 @@ namespace MediaCompression
 
         private void button9_Click(object sender, EventArgs e)
         {
+            yListZigZag = new List<byte>();
+            CrListZigZag = new List<byte>();
+            CbListZigZag = new List<byte>();
+
+            for (int i = 0; i < yArrayQuantized.Length; i++)
+            {
+                yListZigZag.AddRange(im.zigZag(yArrayQuantized[i]));
+            }
+            for (int i = 0; i < CrArrayQuantized.Length; i++)
+            {
+                CrListZigZag.AddRange(im.zigZag(CrArrayQuantized[i]));
+                CbListZigZag.AddRange(im.zigZag(CbArrayQuantized[i]));
+            }
+
+            yListRLE = im.RLE(yListZigZag);
+            CrListRLE = im.RLE(CrListZigZag);
+            CbListRLE = im.RLE(CbListZigZag);
+            MessageBox.Show("zigzag RLE conversion complete.");
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            int xLength = (int)Math.Ceiling((float)(width / 8));
+            int yLength = (int)Math.Ceiling((float)(height / 8));
+            yArrayQuantized = new int[xLength * yLength][,];
+
+            for (int i = 0; i < yArrayQuantized.Length; i++)
+            {
+                Byte[] input = new byte[64];
+                for (int j = 0; j < 64; j++)
+                {
+                    input[j] = yListZigZag[i * 64 + j];
+                }
+                yArrayQuantized[i] = im.reverseZigZag(input);
+            }
+            for (int i = 0; i < CrArrayQuantized.Length; i++)
+            {
+                Byte[] inputCr = new byte[64];
+                Byte[] inputCb = new byte[64];
+                for (int j = 0; j < 64; j++)
+                {
+                    inputCr[j] = CrListZigZag[i * 64 + j];
+                    inputCb[j] = CbListZigZag[i * 64 + j];
+                }
+                CrArrayQuantized[i] = im.reverseZigZag(inputCr);
+                CbArrayQuantized[i] = im.reverseZigZag(inputCb);
+            }
+
+            yListZigZag = im.reverseRLE(yListRLE);
+            CrListZigZag = im.reverseRLE(CrListRLE);
+            CbListZigZag = im.reverseRLE(CbListRLE);
+            MessageBox.Show("reverse zigzag RlE conversion complete.");
+        }
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            List<Byte> saveFile = new List<Byte>();
+
+            Byte[] widthByteArray = BitConverter.GetBytes(width);
+            Byte[] heightByteArray = BitConverter.GetBytes(height);
+            saveFile.AddRange(widthByteArray);
+            saveFile.AddRange(heightByteArray);
+            saveFile.AddRange(yListRLE);
+            saveFile.AddRange(CbListRLE);
+            saveFile.AddRange(CrListRLE);
+
+            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+
+            saveFileDialog1.Filter = "nick files (*.nick)|*.nick|All files (*.*)|*.*";
+            saveFileDialog1.Title = "Save nick file.";
+            saveFileDialog1.ShowDialog();
+
+            if (saveFileDialog1.FileName != "")
+            {
+                FileStream fs = (FileStream)saveFileDialog1.OpenFile();
+                BinaryWriter bw = new BinaryWriter(fs);
+                foreach (Byte b in saveFile)
+                    bw.Write(b);
+            }
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button13_Click(object sender, EventArgs e)
+        {
             int[,] block = new int[8, 8];
+
             for (int y = 0; y < 8; y++)
                 for (int x = 0; x < 8; x++)
-                    block[y, x] = x + y*8;
+                    block[y, x] = x + y * 8;
 
-            //var newBlock = im.IDCT(im.DCT(block));
-            var zigzagblock = im.reverseZigZag(im.zigZag(block));
+            var test = im.IDCT(im.DCT(block));
+            //int[,] blockDCT = 
+            //int[,] blockZZ = new int[8, 8];
+        }
 
+        private void button12_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog1 = new OpenFileDialog();
+            openFileDialog1.Filter = "Picture files|*.nick";
+            openFileDialog1.Title = "Select a nick File";
+            yListRLE = new List<byte>();
+            CrListRLE = new List<byte>();
+            CbListRLE = new List<byte>();
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                using (FileStream fs = File.Open(openFileDialog1.FileName.ToString(), FileMode.Open))
+                {
+                    BinaryReader reader = new BinaryReader(fs);
+
+                    width = reader.ReadInt32();
+                    height = reader.ReadInt32();
+
+                    int xLength = (int)Math.Ceiling((float)(width / 8));
+                    int yLength = (int)Math.Ceiling((float)(height / 8));
+
+                    for (int i = 0; i < width * height; i++)
+                        yListRLE.Add(reader.ReadByte());
+
+                    for (int i = 0; i < xLength * yLength; i++)
+                    {
+                        CrListRLE.Add(reader.ReadByte());
+                    }
+                    for (int i = 0; i < xLength * yLength; i++)
+                    {
+                        CbListRLE.Add(reader.ReadByte());
+                    }
+                }
+            }
         }
     }
 }

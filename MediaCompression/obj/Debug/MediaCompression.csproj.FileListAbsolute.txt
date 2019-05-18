@@ -7,3 +7,4 @@ C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCom
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\bin\Debug\MediaCompression.pdb
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.exe
 C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.pdb
+C:\Users\nicho\source\repos\MediaCompression\MediaCompression\obj\Debug\MediaCompression.csprojAssemblyReference.cache

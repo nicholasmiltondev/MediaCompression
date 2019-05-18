@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace MediaCompression
 {
@@ -143,26 +144,36 @@ namespace MediaCompression
 
         public Byte[] zigZag(int[,] block)
         {
+            //for (int y = 0; y < 8; y++)
+            //    for (int x = 0; x < 8; x++)
+            //        block[y, x] += 128;
+
             Byte[] singleArray = new Byte[64];
             for (int y = 0; y < 8; y++)
                 for (int x = 0; x < 8; x++)
                 {
                     int bx = zz[x + y * 8] % 8;
                     int by = (int)Math.Floor((float)zz[x + y * 8] / 8.0);
-                    singleArray[x + y * 8] = (Byte)block[by, bx];
+                    singleArray[x + y * 8] = (Byte) (block[by, bx] + 128);
                 }
             return singleArray;
         }
 
         public int[,] reverseZigZag(Byte[] input)
         {
+            
+
             int[,] block = new int[8, 8];
             for (int i = 0; i < 64; i++)
             {
                 int x = zz[i]%8;
                 int y = (int)Math.Floor((float)zz[i]/8.0);
-                block[y, x] = input[i];
+                block[y, x] = input[i] - 128;
             }
+            //for (int y = 0; y < 8; y++)
+            //    for (int x = 0; x < 8; x++)
+            //        block[y, x] -= 128;
+
             return block;
         }
 
@@ -187,6 +198,10 @@ namespace MediaCompression
         }
         public int[,] DCT(int[,] input)
         {
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
+                    input[y, x] -= 128;
+
             float pi = (float)Math.PI;
             int[,] ret = new int[8, 8];
             float a;
@@ -205,6 +220,7 @@ namespace MediaCompression
         }
         public int[,] IDCT(int[,] input)
         {
+
             float pi = (float)Math.PI;
             int[,] ret = new int[8, 8];
             float a;
@@ -218,45 +234,77 @@ namespace MediaCompression
                                 * Math.Cos((2.0 * (float)(x) + 1.0) * (float)(u) * pi / 16.0)
                                 * Math.Cos((2.0 * (float)(y) + 1.0) * (float)(v) * pi / 16.0));
 
-                    ret[x, y] = (int)between0and255((Math.Round(a * 0.25)));
+                    ret[x, y] = (int)((Math.Round(a * 0.25)));
                 }
+
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
+                    ret[y, x] = (int)between0and255(ret[y,x]+128);
+
             return ret;
         }
 
-        public ArrayList RLE(int[] ZZ) // Rewrite to store in a byte array
+        public List<Byte> RLE(List<Byte>input) // Rewrite to store in a byte array
         {
-            ArrayList myAL = new ArrayList();
-            int count = 0;
-            for (int i = 0; i < 64; i++)
+            List<Byte> ret = new List<Byte>();
+            Byte count = 0;
+            const Byte key = 128;
+            foreach(Byte b in input)
             {
-                if (ZZ[i] != 0) // if next number is not zero...
-                {
-                    if (count == 0) // and no zeroes occurred previously
-                    {
-                        myAL.Add(ZZ[i]); // add the number to the arraylist
-                    }
-                    else// else a non zero occurred and you have a string of zeroes before
-                    {
-                        myAL.Add(0);
-                        myAL.Add(count);
-                        myAL.Add(ZZ[i]);
-                        count = 0; // Reset count;
-                    }
-                }
-                else if (i < 63) // else zero occurred and not end of the array
-                {
-                    count++; // add to count
-                }
-                else // zero occurred and end of the array
+                if(b == key)
                 {
                     count++;
-                    myAL.Add(0);
-                    myAL.Add(count);
-                    count = 0;
+                } else
+                {
+                    if(count != 0)
+                    {
+                        ret.Add(key);
+                        ret.Add(count);
+                        count = 0;
+                        ret.Add(b);
+                    }
+                    else
+                    {
+                        ret.Add(b);
+                    }
                 }
             }
-            // Copies the elements of the ArrayList to a byte array.
-            return myAL;
+            if(count != 0)
+            {
+                ret.Add(key);
+                ret.Add(count);
+                count = 0;
+            }
+            return ret;
+        }
+
+        public List<Byte> reverseRLE(List<Byte> input) // Rewrite to store in a byte array
+        {
+            List<Byte> ret = new List<Byte>();
+            Boolean stringOfZeroes = false;
+            const Byte key = 128;
+            foreach (Byte b in input)
+            {
+                if (b == key)
+                {
+                    stringOfZeroes = true;
+                }
+                else
+                {
+                    if (stringOfZeroes)
+                    {
+                        for(Byte i = 0; i < b; i++)
+                        {
+                            ret.Add(key);
+                        }
+                        stringOfZeroes = false;
+                    } else
+                    {
+                        ret.Add(b);
+                    }
+                }
+            }
+            return ret;
         }
 
         public ArrayList Compress(int[,] f)
@@ -271,7 +319,7 @@ namespace MediaCompression
             int[] ZZ = new int[64];
             //zigZag(QF, ZZ);
 
-            return RLE(ZZ);
+            return null;
         }
 
     }
