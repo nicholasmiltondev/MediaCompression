@@ -35,6 +35,9 @@ namespace MediaCompression
         int height;
         int subWidth;
         int subHeight;
+        int yBytesLength;
+        int CbBytesLength;
+        int CrBytesLength;
         ImageMath im;
         public Form1()
         {
@@ -71,41 +74,15 @@ namespace MediaCompression
         // Saves result of converting .nick file.
         private void button2_Click(object sender, EventArgs e)
         {
-            // Displays a SaveFileDialog so the user can save the Image  
-            // assigned to Button2.  
             SaveFileDialog saveFileDialog1 = new SaveFileDialog();
-            saveFileDialog1.Filter = "JPeg Image|*.jpg|Bitmap Image|*.bmp|Gif Image|*.gif";
-            saveFileDialog1.Title = "Save an Image File";
+
+            saveFileDialog1.Filter = "BMP files (*.bmp)|*.nick|All files (*.*)|*.*";
+            saveFileDialog1.Title = "Save BMP file.";
             saveFileDialog1.ShowDialog();
 
-            // If the file name is not an empty string open it for saving.  
             if (saveFileDialog1.FileName != "")
             {
-                // Saves the Image via a FileStream created by the OpenFile method.  
-                System.IO.FileStream fs =
-                   (System.IO.FileStream)saveFileDialog1.OpenFile();
-                // Saves the Image in the appropriate ImageFormat based upon the  
-                // File type selected in the dialog box.  
-                // NOTE that the FilterIndex property is one-based.  
-                switch (saveFileDialog1.FilterIndex)
-                {
-                    case 1:
-                        loadedBitmap.Save(fs,
-                           System.Drawing.Imaging.ImageFormat.Jpeg);
-                        break;
-
-                    case 2:
-                        loadedBitmap.Save(fs,
-                           System.Drawing.Imaging.ImageFormat.Bmp);
-                        break;
-
-                    case 3:
-                        loadedBitmap.Save(fs,
-                           System.Drawing.Imaging.ImageFormat.Gif);
-                        break;
-                }
-
-                fs.Close();
+                RGBBitmap.Save(saveFileDialog1.FileName);
             }
         }
         private void convertToYCbCr()
@@ -418,8 +395,14 @@ namespace MediaCompression
 
             Byte[] widthByteArray = BitConverter.GetBytes(width);
             Byte[] heightByteArray = BitConverter.GetBytes(height);
+            Byte[] yBytesLength = BitConverter.GetBytes(yListRLE.Count());
+            Byte[] CbBytesLength = BitConverter.GetBytes(CbListRLE.Count());
+            Byte[] CrBytesLength = BitConverter.GetBytes(CrListRLE.Count());
             saveFile.AddRange(widthByteArray);
             saveFile.AddRange(heightByteArray);
+            saveFile.AddRange(yBytesLength);
+            saveFile.AddRange(CbBytesLength);
+            saveFile.AddRange(CrBytesLength);
             saveFile.AddRange(yListRLE);
             saveFile.AddRange(CbListRLE);
             saveFile.AddRange(CrListRLE);
@@ -473,20 +456,20 @@ namespace MediaCompression
 
                     width = reader.ReadInt32();
                     height = reader.ReadInt32();
+                    yBytesLength = reader.ReadInt32();
+                    CbBytesLength = reader.ReadInt32();
+                    CrBytesLength = reader.ReadInt32();
 
-                    int xLength = (int)Math.Ceiling((float)(width / 8));
-                    int yLength = (int)Math.Ceiling((float)(height / 8));
-
-                    for (int i = 0; i < width * height; i++)
+                    for (int i = 0; i < yBytesLength; i++)
                         yListRLE.Add(reader.ReadByte());
 
-                    for (int i = 0; i < xLength * yLength; i++)
-                    {
-                        CrListRLE.Add(reader.ReadByte());
-                    }
-                    for (int i = 0; i < xLength * yLength; i++)
+                    for (int i = 0; i < CbBytesLength; i++)
                     {
                         CbListRLE.Add(reader.ReadByte());
+                    }
+                    for (int i = 0; i < CrBytesLength; i++)
+                    {
+                        CrListRLE.Add(reader.ReadByte());
                     }
                 }
             }
