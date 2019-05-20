@@ -14,7 +14,6 @@ namespace MediaCompression
     public partial class Form1 : Form
     {
         Bitmap loadedBitmap; // Loading the bitmap from file
-        Bitmap yCbCrBitmap;
         Bitmap RGBBitmap;
         int[] yArray; // Used when taking values from the bitmap
         int[] CbArray; // Used when taking values from the bitmap
@@ -353,9 +352,18 @@ namespace MediaCompression
 
         private void button10_Click(object sender, EventArgs e)
         {
-            int xLength = (int)Math.Ceiling((float)(width / 8));
-            int yLength = (int)Math.Ceiling((float)(height / 8));
+            yListZigZag = im.reverseRLE(yListRLE);
+            CrListZigZag = im.reverseRLE(CrListRLE);
+            CbListZigZag = im.reverseRLE(CbListRLE);
+
+            int xLength = (int)Math.Ceiling(((float)width / 8));
+            int yLength = (int)Math.Ceiling(((float)height / 8));
+            int xSubLength = (int)Math.Ceiling(((float)subWidth / 8));
+            int ySubLength = (int)Math.Ceiling(((float)subHeight / 8));
+            
             yArrayQuantized = new int[xLength * yLength][,];
+            CbArrayQuantized = new int[xSubLength * ySubLength][,];
+            CrArrayQuantized = new int[xSubLength * ySubLength][,];
 
             for (int i = 0; i < yArrayQuantized.Length; i++)
             {
@@ -378,10 +386,6 @@ namespace MediaCompression
                 CrArrayQuantized[i] = im.reverseZigZag(inputCr);
                 CbArrayQuantized[i] = im.reverseZigZag(inputCb);
             }
-
-            yListZigZag = im.reverseRLE(yListRLE);
-            CrListZigZag = im.reverseRLE(CrListRLE);
-            CbListZigZag = im.reverseRLE(CbListRLE);
             MessageBox.Show("reverse zigzag RlE conversion complete.");
         }
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -407,6 +411,14 @@ namespace MediaCompression
             saveFile.AddRange(CbListRLE);
             saveFile.AddRange(CrListRLE);
 
+            var ty = im.reverseRLE(yListRLE);
+            var tb = im.reverseRLE(CbListRLE);
+            var tr = im.reverseRLE(CrListRLE);
+
+            var tyr = im.RLE(ty);
+            var tbr = im.RLE(tb);
+            var trr = im.RLE(tr);
+
             SaveFileDialog saveFileDialog1 = new SaveFileDialog();
 
             saveFileDialog1.Filter = "nick files (*.nick)|*.nick|All files (*.*)|*.*";
@@ -426,7 +438,7 @@ namespace MediaCompression
         {
 
         }
-
+        // Test function.
         private void button13_Click(object sender, EventArgs e)
         {
             int[,] block = new int[8, 8];
@@ -435,7 +447,18 @@ namespace MediaCompression
                 for (int x = 0; x < 8; x++)
                     block[y, x] = x + y * 8;
 
-            var test = im.IDCT(im.DCT(block));
+            List<Byte> block2 = new List<byte>();
+            for (Byte b = 0; b < 64; b++)
+                block2.Add(b);
+
+            block2.Add(128);
+            block2.Add(128);
+            block2.Add(128);
+            block2.Add(128);
+
+            var test = im.reverseRLE(im.RLE(block2));
+
+            //var test = im.IDCT(im.DCT(block));
             //int[,] blockDCT = 
             //int[,] blockZZ = new int[8, 8];
         }
@@ -446,8 +469,8 @@ namespace MediaCompression
             openFileDialog1.Filter = "Picture files|*.nick";
             openFileDialog1.Title = "Select a nick File";
             yListRLE = new List<byte>();
-            CrListRLE = new List<byte>();
             CbListRLE = new List<byte>();
+            CrListRLE = new List<byte>();
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 using (FileStream fs = File.Open(openFileDialog1.FileName.ToString(), FileMode.Open))
@@ -456,6 +479,8 @@ namespace MediaCompression
 
                     width = reader.ReadInt32();
                     height = reader.ReadInt32();
+                    subWidth = (int)Math.Ceiling((float)width / 2);
+                    subHeight = (int)Math.Ceiling((float)height / 2);
                     yBytesLength = reader.ReadInt32();
                     CbBytesLength = reader.ReadInt32();
                     CrBytesLength = reader.ReadInt32();

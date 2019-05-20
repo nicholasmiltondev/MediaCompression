@@ -177,11 +177,6 @@ namespace MediaCompression
             return block;
         }
 
-        void Encode(int[] RL, int rl)
-        {
-
-        }
-
         float C(int u)
         {
             if (u == 0)
@@ -254,6 +249,12 @@ namespace MediaCompression
                 if(b == key)
                 {
                     count++;
+                    if(count == 255)
+                    {
+                        ret.Add(key);
+                        ret.Add(count);
+                        count = 0;
+                    }
                 } else
                 {
                     if(count != 0)
@@ -261,12 +262,8 @@ namespace MediaCompression
                         ret.Add(key);
                         ret.Add(count);
                         count = 0;
-                        ret.Add(b);
                     }
-                    else
-                    {
-                        ret.Add(b);
-                    }
+                    ret.Add(b);
                 }
             }
             if(count != 0)
@@ -285,9 +282,9 @@ namespace MediaCompression
             const Byte key = 128;
             foreach (Byte b in input)
             {
-                if (b == key)
+                if (b == key && stringOfZeroes == false) // If 128
                 {
-                    stringOfZeroes = true;
+                    stringOfZeroes = true; // 
                 }
                 else
                 {
@@ -306,21 +303,5 @@ namespace MediaCompression
             }
             return ret;
         }
-
-        public ArrayList Compress(int[,] f)
-        {
-            int[,] F = new int[8, 8];
-            //DCT(f, F);
-            int[,] QF = new int[8, 8];
-            //Quantize(F, QF);
-
-            int newDC = QF[0, 0];
-
-            int[] ZZ = new int[64];
-            //zigZag(QF, ZZ);
-
-            return null;
-        }
-
     }
 }
