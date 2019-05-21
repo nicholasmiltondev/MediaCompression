@@ -74,8 +74,7 @@ namespace MediaCompression
         private void button2_Click(object sender, EventArgs e)
         {
             SaveFileDialog saveFileDialog1 = new SaveFileDialog();
-
-            saveFileDialog1.Filter = "BMP files (*.bmp)|*.nick|All files (*.*)|*.*";
+            saveFileDialog1.Filter = "BMP files| *.bmp";
             saveFileDialog1.Title = "Save BMP file.";
             saveFileDialog1.ShowDialog();
 
@@ -179,8 +178,8 @@ namespace MediaCompression
             {
                 for (int k = 0; k < 8; k++)
                 {
-                    if (currentW + j <= width)
-                        if (currentH + k <= height)
+                    if (currentW + j < width)
+                        if (currentH + k < height)
                         {
                             eightByEight[j, k] = yArrayParam[currentW + j + (k + currentH) * width];
                             //Cb64[j, k] = CbArrayParam[currentW + j + (k + currentH) * width];
@@ -211,11 +210,11 @@ namespace MediaCompression
 
         private void traverseBitmap() // DCT across bitmap
         {
-            int xLength = (int)Math.Ceiling((float)(width / 8));
-            int yLength = (int)Math.Ceiling((float)(height / 8));
+            int xLength = (int)Math.Ceiling(((float)width / 8));
+            int yLength = (int)Math.Ceiling(((float)height / 8));
 
-            int xSubLength = (int)Math.Ceiling((float)(subWidth / 8));
-            int ySubLength = (int)Math.Ceiling((float)(subHeight / 8));
+            int xSubLength = (int)Math.Ceiling(((float)subWidth / 8));
+            int ySubLength = (int)Math.Ceiling(((float)subHeight / 8));
 
             yArrayQuantized = new int[xLength * yLength][,];
             CbArrayQuantized = new int[xSubLength * ySubLength][,];
@@ -255,11 +254,11 @@ namespace MediaCompression
             CrArraySubsampled = new int[subWidth * subHeight];
             CbArraySubsampled = new int[subWidth * subHeight];
 
-            int xLength = (int)Math.Ceiling((float)(width / 8));
-            int yLength = (int)Math.Ceiling((float)(height / 8));
+            int xLength = (int)Math.Ceiling(((float)width / 8));
+            int yLength = (int)Math.Ceiling(((float)height / 8));
 
-            int xSubLength = (int)Math.Ceiling((float)(subWidth / 8));
-            int ySubLength = (int)Math.Ceiling((float)(subHeight / 8));
+            int xSubLength = (int)Math.Ceiling(((float)subWidth / 8));
+            int ySubLength = (int)Math.Ceiling(((float)subHeight / 8));
 
             for (int y = 0; y < yLength; y++)
             {
